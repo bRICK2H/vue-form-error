@@ -1,28 +1,47 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="container">
+
+    <vForm
+      @sendData="sendData"
+    >
+      <button style="width:300px;display:block;margin:auto;">Send</button>
+    </vForm>
+
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import vForm from './components/plugins/index/v-form.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    vForm
+  },
+  methods: {
+    sendData(val) {
+      console.log('send', val)
+    },
   }
 }
 </script>
 
 <style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500&display=swap');
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+  }
 </style>
