@@ -1,174 +1,229 @@
 <template>
 	<div class="v-over-field"
+		:class="[classes]"
 		:ref="uniqueField"
 	>
 		<slot />
 
+		<!-- Error info -->
+		<transition name="error-icon">
+			<span v-if="currControl.error && !active && reactiveMode"
+				title="Показать ошибку"
+				class="error-call-icon v-over-field__error-call-icon"
+				@click="checkField(false)"
+			></span>
+		</transition>
+		
+		<!-- Error popup message -->
 		<transition name="error">
 			<div v-if="'error' in currControl && currControl.error && active && reactiveMode"
 				class="error-container v-over-field__error-container"
+				:class="{ 'error-container--position-top': position === 'top' }"
+				:style="setStylePositionError"
 			>
+				<span class="error-close error-container__error-close"
+					@click="$formState.CLOSE_ERROR(uid)"
+				></span>
 				<p class="error-title error-container__error-title">
 					Ошибка
 
 					<span class="amount-error error-title__amount-error">
-						<span style="width:20px;height:20px;background:#000;display:inline-block"
-							@click="moveNextError(0)"
+						<span class="counter-left-arrow" 
+							:class="{ 'counter-last-arrow': $formState.IS_LAST_COUNTER(currCountError, getAmountErrors, 'left') }"
+							@click="moveStepError(false)"
 						></span>
-						<!-- <span style="display: none">{{ currentError }}</span> -->
-						<!-- {{ currentOffsetError }} из {{ amountErrors }} -->
-						0 из {{ $formState.GET_AMOUNT_ERRORS() }}
-						<span style="width:20px;height:20px;background:#000;display:inline-block"
-							@click="moveNextError(1)"
+						<span class="counter-text">
+							{{ currCountError }} из {{ getAmountErrors }}
+						</span>
+						<span class="counter-right-arrow"
+							:class="{ 'counter-last-arrow': $formState.IS_LAST_COUNTER(currCountError, getAmountErrors, 'right') }"
+							@click="moveStepError(true)"
 						></span>
 					</span>
 				</p>
+				
 				{{ currControl.text }}
 			</div>
 		</transition>
-
-		<!-- <transition name="error">
-			<div v-if="error && active"
-				class="error-container v-over-field__error-container"
-			>
-				<p class="error-title error-container__error-title">
-					Ошибка
-
-					<span class="amount-error error-title__amount-error">
-						<span style="width:20px;height:20px;background:#000;display:inline-block"
-							@click="moveNextError(0)"
-						></span>
-						<span style="display: none">{{ currentError }}</span>
-						{{ currentOffsetError }} из {{ amountErrors }}
-						<span style="width:20px;height:20px;background:#000;display:inline-block"
-							@click="moveNextError(1)"
-						></span>
-					</span>
-				</p>
-				{{ message }}
-			</div>
-		</transition> -->
 	</div>
 </template>
 
 <script>
 export default {
-	name: 'vOverField',
+	name: 'VOverField',
 	props: {
 		value: null,
-		id: {
-			type: Number,
+		uid: {
+			type: [String, Number],
 			required: true,
 		},
-		required: {
-			type: Boolean,
-			default: false
+		verification: {
+			type: Array,
+			default: () => (['required'])
 		},
+		position: {
+			type: String,
+			default: 'bottom'
+		},
+		classes: {
+			type: Array,
+			default: () => ([])
+		}
 	},
 	data: () => ({
+		name: 'v-over-field',
 		uniqueField: '',
 		currControl: {},
-		reactiveError: false,
-		reactiveMode: false,
+		currCountError: 1,
+		maxPassword: 6,
+		order: null,
+		heightError: null,
 		active: false,
-		// amountErrors: 0,
-		// currentOffsetError: 0,
+		reactiveMode: false,
+		reactive: false,
 	}),
 	computed: {
-		// generalData() {
-		// 	const keys = ['id', 'required', 'value', 'error']
-		// 	return this.$parent.$children.reduce((acc, curr) => {
-		// 		acc.push(keys.reduce((a, key) => (a[key] = curr[key], a), {}))
-		// 		return acc
-		// 	}, [])
-		// },
-		// currentError() {
-		// 	return this.currentOffsetError = this.generalData
-		// 		.filter(curr => curr.error)
-		// 		.findIndex(curr => curr.id === this.id) + 1
-		// },
+		getAmountErrors() {
+			return this.$formState.GET_AMOUNT_ERRORS()
+		},
+		setStylePositionError() {
+			if (this.heightError) return this.heightError
+		},
+		getMaxPassword() {
+			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === 'password')
+			return currEl && 'max' in currEl && currEl.max && typeof currEl.max === 'number'
+				? currEl.max : null
+		},
 	},
 	methods: {
-		checkField(send = false, value = this.value) {
-			if (this.required) {
-				this.$formState.SET_ACTIVE_FIELD(this.id, send)
+		verifyRequired(value) {
+			return Array.isArray && !value.length || !value
+		},
+		verifyPhone(value) {
+			const temp = process.env.NODE_ENV === 'development' ? 9 : ''
+			const pattern = new RegExp(`^(\\+7|8|${temp}) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
 
-				this.currControl = {
-					id: this.id,
-					text: 'Это поле не может быть пустым!',
-					status: true,
-					error: Array.isArray && !value.length || !value
+			return !(pattern.test(value))
+		},
+		verifyPassword(value) {
+			return value.length < (this.getMaxPassword ? this.getMaxPassword : this.maxPassword)
+		},
+		getText(name) {
+			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === name)
+
+			return currEl && 'text' in currEl && currEl.text
+				? currEl.text : null
+		},
+		orederError(value) {
+			const verification = this.verification
+				.map(curr => {
+					const create_method = name => name.map((v, i) => i === 0 ? v.toUpperCase() : v).join('')
+					const generate_method = typeof curr === 'string'
+						? create_method(curr.split(''))
+						: create_method(curr.name.split(''))
+					const toggle_verification = `verify${generate_method}`
+					
+					return {
+						name: typeof curr === 'string'
+							? curr
+							: curr.name,
+						error: this[toggle_verification](value)
+					}
+				})
+
+			return verification.reduce((acc, curr) => {
+				acc = curr.name
+				
+				if (verification.every(v => v.error)) {
+					acc = verification.includes('required')
+						? 'required'
+						: verification[verification.findIndex(i => i.error)].name
+				} else {
+					if (verification.some(v => v.error)) {
+						acc = curr.name
+					}
 				}
 
-				this.$formState.SET_ERROR(this.currControl)
+				return acc
+			}, '')
+		},
+		createErrorControl(text, error) {
+			this.currControl = {
+				uid: this.uid,
+				verification: this.verification,
+				status: true,
+				text, error
 			}
-		}
-		// moveNextError(flag) {
+		},
+		checkField(send, value = this.value) {
+			const orederError = this.orederError(value)
+			const text = this.getText(orederError)
 
-		// 	this.$parent.$children.forEach(curr => {
-		// 		if (curr.amountErrors === 1) return
-		// 		if (flag) {
-		// 			if(curr.currentOffsetError < curr.amountErrors) {
-		// 				curr.currentOffsetError++
-		// 			}
-		// 		} else {
-		// 			if(curr.currentOffsetError > 1) {
-		// 				curr.currentOffsetError--
-		// 			}
-		// 		}
-		// 	})
+			switch (orederError) {
+				case 'required':
+					this.createErrorControl(
+						!text
+							? 'Это поле не может быть пустым!'
+							: text,
+						this.verifyRequired(value)
+					)
+					break;
 
-		// 	const nextError = this.generalData
-		// 		.filter(curr => curr.error)[this.currentOffsetError - 1]
+				case 'phone':
+					this.createErrorControl(
+						!text
+							? 'Не верный формат номера!'
+							: text,
+						this.verifyPhone(value)
+					)
+					break;
 
-		// 	console.log('moveNextError', this.currentOffsetError)
-		// 	this.openActiveError(nextError.id)
-			
-		// },
-		// openActiveError(id) {
-		// 	this.$parent.$children.forEach(curr => {
-		// 		curr.active = curr.id === id
-		// 	})
-		// }
+				case 'password':
+					this.createErrorControl(
+						!text
+							? `Пароль не может быть менее ${this.getMaxPassword ? this.getMaxPassword : this.maxPassword} символов!`
+							: text,
+						this.verifyPassword(value)
+					)
+
+					break;
+			}
+
+			this.$formState.SET_ERROR(this.currControl)
+
+			if (!send) {
+				this.$formState.SET_ACTIVE_FIELD(this.uid)
+			}
+		},
+		moveStepError(side) {
+			side ? this.currCountError++ : this.currCountError--
+
+			this.currCountError = this.currCountError <= 1
+				? 1
+				: this.currCountError >= this.getAmountErrors
+					? this.getAmountErrors : this.currCountError
+
+			this.$formState.SYNC_COUNT_ERROR(this.currCountError)
+			this.$formState.MOVE_ACTIVE_FIELD(this.currCountError)
+		},
 	},
 	watch: {
 		value(val) {
 			this.checkField(false, val)
-
-
-			// this.$formState.GET_CURR_FIELD(this.id).reactiveError = !this.$formState.GET_CURR_FIELD(this.id).reactiveError
-			// if (this.required) {
-			// 	const message = 'Это поле не может быть пустым!'
-
-			// 	if (Array.isArray && !val.length || !val) {
-			// 		this.error = true
-			// 		this.message = message
-
-			// 		this.openActiveError(this.id)
-
-
-			// 		this.$emit('has-error', this.generalData.find(curr => curr.id === this.id))
-			// 	} else {
-			// 		this.error = false
-
-			// 		const nextError = this.generalData.find(curr => curr.error)
-			// 		if (nextError) {
-			// 			this.openActiveError(nextError.id)
-			// 		}
-			// 	}
-			// }
-
-			// this.$parent.$children.forEach(curr => {
-			// 	curr.amountErrors = this.generalData.filter(curr => curr.error).length
-			// })
-			// console.log(this.amountErrors)
 		},
-		currControl({ error }) {
+		async currControl({ error }) {
+			await this.$nextTick()
 			const field_ref = this.$refs[this.uniqueField].firstChild
 			
 			if (error) {
 				if (this.reactiveMode) {
 					this.$formState.SET_ERROR_STYLE(field_ref)
+
+					if (this.position === 'top') {
+						this.heightError = {
+							top: `calc(0% - ${this.$refs[this.uniqueField].lastChild.offsetHeight + 20}px)`
+						}
+					}
 				}
 			} else {
 				if (this.reactiveMode) {
@@ -176,21 +231,21 @@ export default {
 				}
 			}
 		},
-		reactiveError(isReactive) {
+		reactive(isReactive) {
 			if (isReactive) this.reactiveMode = true
 		}
 	},
 	created() {
-		this.uniqueField = `field:${String(Math.random()).replace(/^.?\./, "")}`
+		this.uniqueField = `field:${String(Math.random()).replace(/^.?\./, '')}`
 	}
 }
 </script>
 
 <style lang="scss">
 	.v-over-field {
-		width: fit-content;
+		width: 100%;
 		position: relative;
-		margin: 20px 0;
+		margin: 10px 0;
 		border-radius: 8px;
 
 		&__error-container {
@@ -199,9 +254,54 @@ export default {
 			top: calc(100% + 20px);
 			z-index: 99999;
 		}
+		&__error-call-icon {
+			position: absolute;
+			top: 50%;
+			right: -30px;
+			transform: translateY(-50%);
+		}
+	}
+	.error-call-icon {
+		width: 22px;
+		height: 22px;
+		font-size: 16px;
+		color: #FEB2B2;
+		border-radius: 50%;
+		border: 2px solid #FEB2B2;
+		background-color: #fff;
+		cursor: pointer;
+		transition: .2s;
+
+		&::after, &::before {
+			content: '';
+			width: 2px;
+			background-color: #FEB2B2;
+			position: absolute;
+			left: 50%;
+			display: flex;
+			justify-content: center;
+		}
+		&::after {
+			height: 9px;
+			border-radius: 30%;
+			top: calc(50% - 2px);
+			transform: translate(-50%, -50%);
+		}
+		&::before {
+			height: 2px;
+			border-radius: 50%;
+			top: calc(100% - 4px);
+			transform: translateX(-50%);
+		}
+		&:hover {
+			border: 2px solid transparent;
+			background-color: #FFF5F6;
+			transform: translateY(-50%) scale(1.2)
+		}
 	}
 	.error-container {
-		min-width: 313px;
+		min-width: 210px;
+		max-width: calc(100% - 20px);
 		padding: 8px;
 		border: 2px solid #FEB2B2;
 		border-radius: 8px;
@@ -225,12 +325,106 @@ export default {
 			left: 16px;
 			top: -12.5px;
 			background-color: #FFF5F6;
-			
+		}
+
+		&--position-top {
+			&::before, &::after {
+				clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+			}
+			&::before {
+				top: 100%;
+			}
+			&::after {
+				top: calc(100% - 2px);
+			}
+		}
+
+		&__error-close {
+			position: absolute;
+			top: 10px;
+			right: 8px;
+		}
+	}
+	.error-close {
+		width: 20px;
+		height: 20px;
+		background: url('../assets/img/close.png') no-repeat 50% 50% / cover;
+		cursor: pointer;
+		transition: .2s;
+
+		&:hover {
+			opacity: .5;
+			transform: scale(1.2) rotate(90deg);
 		}
 	}
 	.error-title {
+		font-size: 16px;
 		font-weight: 600;
 		margin-bottom: 8px;
+		display: flex;
+		align-items: center;
+
+		&__amount-error {
+			margin: 2px 0 0 15px;
+			display: inline-flex;
+			align-items: center;
+		}
+	}
+
+	.counter-left-arrow,
+	.counter-right-arrow {
+		display: inline-block;
+		width: 15px;
+		height: 15px;
+		background: url('../assets/img/arrow.png') no-repeat 50% 50% / cover;
+		cursor: pointer;
+		transition: .2s;
+
+		&:hover {
+			opacity: .8;
+			transform: scale(1.5);
+		}
+	}
+	.counter-left-arrow {
+		transform: rotate(180deg);
+
+		&:hover {
+			transform: rotate(180deg) scale(1.5);
+		}
+	}
+	.counter-last-arrow {
+		opacity: .2;
+
+		&:hover {
+			opacity: .2;
+			cursor: default;
+			transform: scale(1);
+		}
+	}
+	.counter-left-arrow.counter-last-arrow {
+		&:hover {
+			transform: rotate(180deg) scale(1);
+		}
+	}
+	.counter-text {
+		font-size: 12px;
+		margin: 0 10px 2px;
+	}
+	.error-icon-enter-active {
+		animation: error-icon-enter .2s;
+
+		@keyframes error-icon-enter {
+			0% { transform: translateY(-50%) scale(0) }
+			50% { transform: translateY(-50%) scale(1.2) }
+			100% { transform: translateY(-50%) scale(1) }
+		}
+	}
+	.error-icon-leave-active {
+		animation: error-icon-leave .2s;
+
+		@keyframes error-icon-leave {
+			100% { transform: translateY(-50%) scale(0) }
+		}
 	}
 	.error-enter-active {
 		animation: error-enter .2s;

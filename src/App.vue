@@ -7,27 +7,26 @@
       <button style="width:300px;display:block;margin:auto;">Send</button>
     </vForm> -->
 
-    <vForm
+    <VFormControl
       :reactiveError="true"
+      :height="500"
+      :classes="['some']"
       :control="control"
-      @sendData="sendData"
+      @submit="sendData"
     >
-      {{ value1 }} {{ value2 }} {{ value3 }}
-	
-      <v-over-field
-        :id="1"
+      <VOverField
+        :uid="1"
         :required="true"
         :value="value1"
-        @has-error="hasError"
+        position="top"
       >
-        <input type="text" v-model="value1">
-      </v-over-field>
+        <input class="input" type="text" v-model="value1">
+      </VOverField>
 
-      <v-over-field
-        :id="2"
+      <VOverField
+        :uid="2"
         :value="value2"
         :required="true"
-        @has-error="hasError"
       >
         <izi-select
           width="300"
@@ -35,30 +34,29 @@
           :options="options"
           :multiple="true"
         />
-      </v-over-field>
+      </VOverField>
 
-      <v-over-field
-        :id="3"
+      <VOverField
+        :uid="3"
         :required="true"
         :value="value3"
-        @has-error="hasError"
       >
-        <input type="text" v-model="value3">
-      </v-over-field>
+        <input class="input" type="text" v-model="value3">
+      </VOverField>
       
-      <button style="width:300px;display:block;margin:auto;">Send</button>
-    </vForm>
+      <button style="width:150px;display:block;margin:auto;">Send</button>
+    </VFormControl>
 
   </div>
 </template>
 
 <script>
-import vForm from './components/plugins/app'
+import VFormControl from './components/plugins/app'
 
 export default {
   name: 'App',
   components: {
-    vForm
+    VFormControl
   },
   data: () => ({
     control: {
@@ -76,13 +74,6 @@ export default {
     sendData(val) {
       console.log('send', val)
     },
-    hasError(val) {
-			console.log('hasError', val)
-			const x = this.$children.find(curr => curr.id === val.id)
-			// x.error = true
-			// this.$set(x, 'error', true)
-			console.log('x: ', x, this.cData)
-		},
   }
 }
 </script>
@@ -104,5 +95,13 @@ export default {
     width: 100vw;
     height: 100vh;
     display: flex;
+  }
+
+  .input {
+    min-height: 44px;
+    border: 2px solid #eeedf7;
+    border-radius: 8px;
+    outline: none;
+    padding: 0 15px;
   }
 </style>
