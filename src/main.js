@@ -1,12 +1,7 @@
 import Vue from 'vue'
-import App from './App.vue'
-import iziSelect from './components/plugins/c-select'
-import vFrom from './components/plugins/app'
+import VFormControl from './v-form-control.vue'
+import Core from './control/core'
 
-Vue.config.productionTip = false
-Vue.component('iziSelect', iziSelect)
-Vue.component('vFrom', vFrom)
+Vue.use(Core)
 
-new Vue({
-  render: h => h(App),
-}).$mount('#app')
+export default VFormControl
