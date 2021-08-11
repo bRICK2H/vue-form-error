@@ -1,50 +1,97 @@
 <template>
 	<div class="v-over-field"
 		:class="[classes]"
+		:style="setStyleContainerMargin"
 		:ref="uniqueField"
 	>
 		<slot />
 
-		<!-- Error info -->
-		<transition name="error-icon">
-			<span v-if="currControl.error && !active && reactiveMode"
-				title="Показать ошибку"
-				class="error-call-icon v-over-field__error-call-icon"
-				@click="checkField(false)"
-			></span>
-		</transition>
-		
-		<!-- Error popup message -->
-		<transition name="error">
-			<div v-if="'error' in currControl && currControl.error && active && reactiveMode"
-				class="error-container v-over-field__error-container"
-				:class="{ 'error-container--position-top': position === 'top' }"
-				:style="setStylePositionError"
-			>
-				<span class="error-close error-container__error-close"
-					@click="$formState.CLOSE_ERROR(uid)"
+		<!-- POPUB ERROR -->
+		<template v-if="popubMode">
+			<!-- Error icon (show error) -->
+			<transition name="error-icon">
+				<span v-if="currControl.error && !active && reactiveMode"
+					title="Показать ошибку"
+					class="error-call-icon v-over-field__error-call-icon"
+					@click="checkField(false)"
 				></span>
-				<p class="error-title error-container__error-title">
-					Ошибка
+			</transition>
+			
+			<!-- Error popup message -->
+			<transition name="error-pupub">
+				<div v-if="'error' in currControl && currControl.error && active && reactiveMode"
+					class="error-popub-container v-over-field__error-popub-container"
+					:class="{ 'error-popub-container--position-top': position === 'top' }"
+					:style="setStylePositionError"
+				>
+					<span class="error-close error-popub-container__error-close"
+						@click="$formState.CLOSE_ERROR(uid)"
+					></span>
+					<p class="error-title error-popub-container__error-title">
+						Ошибка
 
-					<span class="amount-error error-title__amount-error">
-						<span class="counter-left-arrow" 
-							:class="{ 'counter-last-arrow': $formState.IS_LAST_COUNTER(currCountError, getAmountErrors, 'left') }"
-							@click="moveStepError(false)"
-						></span>
-						<span class="counter-text">
-							{{ currCountError }} из {{ getAmountErrors }}
+						<span class="amount-error error-title__amount-error">
+							<span class="counter-left-arrow" 
+								:class="{ 'counter-last-arrow': $formState.IS_LAST_COUNTER(currCountError, getAmountErrors, 'left') }"
+								@click="moveStepError(false)"
+							></span>
+							<span class="counter-text">
+								{{ currCountError }} из {{ getAmountErrors }}
+							</span>
+							<span class="counter-right-arrow"
+								:class="{ 'counter-last-arrow': $formState.IS_LAST_COUNTER(currCountError, getAmountErrors, 'right') }"
+								@click="moveStepError(true)"
+							></span>
 						</span>
-						<span class="counter-right-arrow"
-							:class="{ 'counter-last-arrow': $formState.IS_LAST_COUNTER(currCountError, getAmountErrors, 'right') }"
-							@click="moveStepError(true)"
-						></span>
-					</span>
-				</p>
-				
-				{{ currControl.text }}
-			</div>
-		</transition>
+					</p>
+					
+					{{ currControl.text }}
+				</div>
+			</transition>
+		</template>
+
+		<!-- DEFAULT ERROR -->
+		<template v-else>
+			<transition :name="getStatusField" mode="out-in">
+				<div v-if="getStatusField === 'error-default'"
+					key="error-default"
+					ref="error-default"
+					class="default-container"
+				>
+					<img class="default-icon"
+						src="../assets/img/error.png"
+						alt="icon"
+					>
+					<p class="error-default-text">
+						{{ currControl.text }}
+					</p>
+				</div>
+				<div v-else-if="getStatusField === 'success-default'"
+					key="success-default"
+					class="default-container"
+				>
+					<img class="default-icon"
+						src="../assets/img/success.png"
+						alt="icon"
+					>
+					<p class="success-default-text">
+						{{ success }}
+					</p>
+				</div>
+				<div v-else-if="getStatusField === 'info-default'"
+					key="info-default"
+					class="default-container"
+				>
+					<img class="default-icon"
+						src="../assets/img/info.png"
+						alt="icon"
+					>
+					<p class="info-default-text">
+						{{ info }}
+					</p>
+				</div>
+			</transition>
+		</template>
 	</div>
 </template>
 
@@ -61,9 +108,21 @@ export default {
 			type: Array,
 			default: () => (['required'])
 		},
+		info: {
+			type: String,
+			default: ''
+		},
+		success: {
+			type: String,
+			default: ''
+		},
 		position: {
 			type: String,
 			default: 'bottom'
+		},
+		margin: {
+			type: [String, Number],
+			default: '0'
 		},
 		classes: {
 			type: Array,
@@ -80,15 +139,31 @@ export default {
 		order: null,
 		heightError: null,
 		active: false,
-		reactiveMode: false,
 		reactive: false,
+		reactiveMode: false,
+		popub: false,
+		popubMode: false,
 	}),
 	computed: {
+		getStatusField() {
+			if ('error' in this.currControl && this.currControl.error && this.reactiveMode) {
+				return 'error-default'
+			} else if ('error' in this.currControl && !this.currControl.error && this.reactiveMode && this.success) {
+				return 'success-default'
+			} else if (this.info) {
+				return 'info-default'
+			}
+		},
 		getAmountErrors() {
 			return this.$formState.GET_AMOUNT_ERRORS()
 		},
 		setStylePositionError() {
 			if (this.heightError) return this.heightError
+		},
+		setStyleContainerMargin() {
+			return {
+				margin: String(this.margin).split(' ').map(p => `${p}px`).join(' ')
+			}
 		},
 		getMaxPassword() {
 			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === 'password')
@@ -101,8 +176,8 @@ export default {
 			return Array.isArray && !value.length || !value
 		},
 		verifyPhone(value) {
-			const temp = process.env.NODE_ENV === 'development' ? 9 : ''
-			const pattern = new RegExp(`^(\\+7|8|${temp}) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
+			// const temp = process.env.NODE_ENV === 'development' ? 9 : ''
+			const pattern = new RegExp(`^(\\+7|8|9) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
 
 			return !(pattern.test(value))
 		},
@@ -188,7 +263,7 @@ export default {
 				case 'password':
 					this.createErrorControl(
 						!text
-							? `Пароль не может быть менее ${this.getMaxPassword ? this.getMaxPassword : this.maxPassword} символов!`
+							? `Пароль должен содержать не менее ${this.getMaxPassword ? this.getMaxPassword : this.maxPassword} символов`
 							: text,
 						this.verifyPassword(value)
 					)
@@ -247,8 +322,10 @@ export default {
 					this.$formState.SET_ERROR_STYLE(field_ref, this.uniqueMarkError)
 
 					if (this.position === 'top') {
+						const el_error = document.querySelector(`[error="${this.uniqueMarkError}"]`)
+
 						this.heightError = {
-							top: `calc(0% - ${field_ref.lastChild.offsetHeight + 20}px)`
+							top: `-${field_ref.lastChild.offsetHeight - el_error.offsetTop}px`
 						}
 					}
 				}
@@ -259,7 +336,10 @@ export default {
 			}
 		},
 		reactive(isReactive) {
-			if (isReactive) this.reactiveMode = true
+			this.reactiveMode = isReactive
+		},
+		popub(isPopub) {
+			this.popubMode = isPopub
 		}
 	},
 	created() {
@@ -268,7 +348,7 @@ export default {
 	mounted() {
 		const el_error = document.querySelectorAll(`.${this.uid}`)
 		this.uniqueMarkError = `[${this.uid}:${String(Math.random()).split('').slice(2, 12).join('')}]`
-		
+
 		if (el_error) {
 			for (let i = 0; i < el_error.length; i++) {
 				el_error[i].setAttribute('error', this.uniqueMarkError)
@@ -286,7 +366,7 @@ export default {
 		margin: 10px 0;
 		border-radius: 8px;
 
-		&__error-container {
+		&__error-popub-container {
 			position: absolute;
 			left: 0;
 			top: calc(100% + 20px);
@@ -336,7 +416,8 @@ export default {
 			transform: scale(1.2)
 		}
 	}
-	.error-container {
+
+	.error-popub-container {
 		min-width: 210px;
 		max-width: calc(100% - 20px);
 		padding: 8px;
@@ -382,7 +463,7 @@ export default {
 			right: 8px;
 		}
 	}
-	.error-close {
+	.error-close { 
 		width: 20px;
 		height: 20px;
 		background: url('../assets/img/close.png') no-repeat 50% 50% / cover;
@@ -447,6 +528,34 @@ export default {
 		font-size: 12px;
 		margin: 0 10px;
 	}
+
+	.default-container {
+		display: flex;
+		margin: 10px 0 0 0;
+		display: flex;
+		align-items: center;
+		position: relative;
+	}
+	.default-icon {
+		width: 16px;
+		height: 16px;
+		margin-right: 7px;
+	}
+	.error-default-text,
+	.info-default-text,
+	.success-default-text {
+		font-size: 12px;
+	}
+	.error-default-text {
+		color: #CA2E2E;
+	}
+	.info-default-text {
+		color: #A2A2B9;	
+	}
+	.success-default-text {
+		color: #128788;
+	}
+
 	.error-icon-enter-active {
 		animation: error-icon-enter .2s;
 
@@ -463,21 +572,51 @@ export default {
 			100% { transform: scale(0) }
 		}
 	}
-	.error-enter-active {
-		animation: error-enter .2s;
+	.error-default-enter-active,
+	.error-pupub-enter-active {
+		animation: error-default-enter .2s;
 
-		@keyframes error-enter {
-			0% { opacity: 0; left: -100px; }
-			50% { left: 10px; }
-			75% { left: -10px; }
+		@keyframes error-default-enter {
+			0% { opacity: 0; left: 100px; }
+			50% { left: -10px; }
+			75% { left: 10px; }
 			100% { left: 0; }
 		}
 	}
-	.error-leave-active {
-		animation: error-leave .2s;
+	.error-default-leave-active,
+	.error-pupub-leave-active {
+		animation: error-default-leave .2s;
 
-		@keyframes error-leave {
-			100% { left: -100px; opacity: 0 }
+		@keyframes error-default-leave {
+			100% { opacity: 0; }
+		}
+	}
+	.info-default-enter-active {
+		animation: info-default-enter .2s;
+
+		@keyframes info-default-enter {
+			0% { opacity: 0;}
+		}
+	}
+	.info-default-leave-active {
+		animation: info-default-leave .2s;
+
+		@keyframes info-default-leave {
+			100% { opacity: 0; }
+		}
+	}
+	.success-default-enter-active {
+		animation: success-default-enter .2s;
+
+		@keyframes success-default-enter {
+			0% { transform: translateY(-25px) }
+		}
+	}
+	.success-default-leave-active {
+		animation: success-default-leave .2s;
+
+		@keyframes success-default-leave {
+			100% { opacity: 0; }
 		}
 	}
 </style>

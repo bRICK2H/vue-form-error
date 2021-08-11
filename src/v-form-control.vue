@@ -31,6 +31,10 @@ export default {
       type: [String, Number],
       required: true
     },
+    popub: {
+      type: Boolean,
+      default: true
+    },
     control: {
       type: Object,
       default: () => ({
@@ -108,6 +112,7 @@ export default {
   },
   mounted() {
     this.$formState.SET_FIELDS(this, {
+      popub: this.popub,
       reactive: this.reactive,
       control: this.control
     })
