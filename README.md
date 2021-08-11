@@ -11,6 +11,7 @@ Vue.component('VFormControl', VFormControl)
 | ---- 				| :--: 					| :-----: 												  	| --------------- 											|
 | uid 				| `[Number, String]` | -															| Уникальный ключ, обязательный параметр				|
 | reactive 			| `Boolean`				| **false** 												| Реактивно обрабатывать ошибки для каждого поля	|
+| popub 				| `Boolean`				| **true** 													| Выводить ошибки в pupub режиме							|
 | error 				| `Object`				| **{ result: null, text: '' }** 					| Обработка общих ошибок с сервера						|
 | control 			| `Object`				| **{ errors: [ ], info: [ ], warnings: [ ] }** | Результат обработки ошибок, предупреждений 		|
 | width 				| `[Number, String]` | **auto** 													| Ширина формы 												|
@@ -30,6 +31,8 @@ Vue.component('VFormControl', VFormControl)
 | ---- 				| :--: 					| :-----: 				| --------------- 																													|
 | uid 				| `[Number, String]` | -						| Уникальный ключ, обязательный параметр																						|
 | verification 	| `Array`				| **['required']** 	| Условия валидации текущего поля, существующие: ['required', 'phone', 'password', 'digit', 'string'] 	|
+| info			 	| `String`				| **''** 				| Вывод информации (работает пока для режема popub: false)																|
+| success		 	| `String`				| **''** 				| Информирование о правильном формате записи (работает пока для режема popub: false) 										|
 | value 				| `any`					| **null** 				| Текущее, изменяемое значение																									|
 | position 			| `String` 				| **'bottom'** 		| Выбор позиции окна ошибок, по умолчанию с низу bottom или top 														|
 | classes 			| `Array` 				| **[ ]**   			| Массив классов 																														|
