@@ -6,6 +6,8 @@
 		@mouseenter="isHover = true"
 		@mouseleave="isHover = false"
 		@click="handler"
+		@focus="isFocus = true"
+		@blur="isFocus = false"
 	>
 		{{ label }}
 	</button>
@@ -58,6 +60,7 @@ export default {
 	},
 	data: () => ({
 		isHover: false,
+		isFocus: false,
 	}),
 	computed: {
 		setStyleToSumbit() {
@@ -66,7 +69,15 @@ export default {
 				width: this.width === 'auto' ? 'auto' : `${parseFloat(this.width)}px`,
 				height: this.height === 'auto' ? 'auto' : `${parseFloat(this.height)}px`,
 				padding: String(this.padding).split(' ').map(p => `${p}px`).join(' '),
-				backgroundColor: this.isHover ? this.bHover : this.disabled ? '#D0D0E2' : this.bColor
+				backgroundColor:
+					this.isHover
+						? this.bHover
+						: this.disabled
+							? '#D0D0E2'
+							: this.isFocus
+									? '#3f3f58'
+									: this.bColor
+								
 			}
 		},
 		setClassCursor() {
@@ -77,6 +88,8 @@ export default {
 		handler() {
       	this.$formState.SUBMIT()
 			this.$emit('submit', this.$formState.GET_RESULT())
+			this.isHover = false
+			this.isFocus = false
 		}
 	},
 	created() {

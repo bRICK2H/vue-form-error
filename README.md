@@ -17,6 +17,7 @@ Vue.component('VFormControl', VFormControl)
 | width 				| `[Number, String]` | **auto** 													| Ширина формы 												|
 | height 			| `[Number, String]` | **auto** 													| Высота формы 												|
 | padding 			| `[Number, String]` | **'40 80'** 												| Padding формы 												|
+| formStyle			| `Boolean`				| **true** 													| Подключить стили формы									|
 | classes 			| `Array` 				| **[ ]**   												| Массив классов 												|
 | buttonClose 		| `Boolean` 			| **false**   												| Показывать иконку закрытия формы						|
 
@@ -27,15 +28,15 @@ Vue.component('VFormControl', VFormControl)
 ```
 
 ## VOverField config (дочерняя обертка для полей):
-| Name 				| Type 					| Default 				| Description 																															|
-| ---- 				| :--: 					| :-----: 				| --------------- 																													|
-| uid 				| `[Number, String]` | -						| Уникальный ключ, обязательный параметр																						|
-| verification 	| `Array`				| **['required']** 	| Условия валидации текущего поля, существующие: ['required', 'phone', 'password', 'digit', 'string'] 	|
-| info			 	| `String`				| **''** 				| Вывод информации (работает пока для режема popub: false)																|
-| success		 	| `String`				| **''** 				| Информирование о правильном формате записи (работает пока для режема popub: false) 										|
-| value 				| `any`					| **null** 				| Текущее, изменяемое значение																									|
-| position 			| `String` 				| **'bottom'** 		| Выбор позиции окна ошибок, по умолчанию с низу bottom или top 														|
-| classes 			| `Array` 				| **[ ]**   			| Массив классов 																														|
+| Name 				| Type 					| Default 				| Description 																																				|
+| ---- 				| :--: 					| :-----: 				| --------------- 																																		|
+| uid 				| `[Number, String]` | -						| Уникальный ключ, обязательный параметр																											|
+| verification 	| `Array`				| **['required']** 	| Условия валидации текущего поля, существующие: ['required', 'name', 'email', 'phone', 'password', 'digit', 'string'] 	|
+| info			 	| `String`				| **''** 				| Вывод информации (работает пока для режема popub: false)																					|
+| success		 	| `String`				| **''** 				| Информирование о правильном формате записи (работает пока для режема popub: false) 												|
+| value 				| `any`					| **null** 				| Текущее, изменяемое значение																														|
+| position 			| `String` 				| **'bottom'** 		| Выбор позиции окна ошибок, по умолчанию с низу bottom или top 																			|
+| classes 			| `Array` 				| **[ ]**   			| Массив классов 																																			|
 
 <!-- 
 	Важно, для объводки полей с ошибками!
@@ -93,7 +94,16 @@ Vue.component('VFormControl', VFormControl)
   :classes="['form-control']"
 >
 	<VOverField
-	  uid="auth"
+	  uid="name"
+	  :value="name"
+	  :verification="[{ name: 'name', min: 3 }]"
+	  position="top"
+	>
+	  <input class="input" type="text" v-model="login">
+  	</VOverField>
+	  
+	<VOverField
+	  uid="login"
 	  :value="login"
 	  :verification="[{ name: 'required', text: 'Поле не может быть пустым!' }, 'phone']"
 	  position="top"

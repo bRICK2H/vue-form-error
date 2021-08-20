@@ -52,45 +52,47 @@
 
 		<!-- DEFAULT ERROR -->
 		<template v-else>
-			<transition :name="getStatusField" mode="out-in">
-				<div v-if="getStatusField === 'error-default'"
-					key="error-default"
-					ref="error-default"
-					class="default-container"
-				>
-					<img class="default-icon"
-						src="../assets/img/error.png"
-						alt="icon"
+			<div class="message-default-container">
+				<transition :name="getStatusField" mode="out-in">
+					<div v-if="getStatusField === 'error-default'"
+						key="error-default"
+						ref="error-default"
+						class="default-container"
 					>
-					<p class="error-default-text">
-						{{ currControl.text }}
-					</p>
-				</div>
-				<div v-else-if="getStatusField === 'success-default'"
-					key="success-default"
-					class="default-container"
-				>
-					<img class="default-icon"
-						src="../assets/img/success.png"
-						alt="icon"
+						<img class="default-icon"
+							src="../assets/img/error.png"
+							alt="icon"
+						>
+						<p class="error-default-text">
+							{{ currControl.text }}
+						</p>
+					</div>
+					<div v-else-if="getStatusField === 'success-default'"
+						key="success-default"
+						class="default-container"
 					>
-					<p class="success-default-text">
-						{{ success }}
-					</p>
-				</div>
-				<div v-else-if="getStatusField === 'info-default'"
-					key="info-default"
-					class="default-container"
-				>
-					<img class="default-icon"
-						src="../assets/img/info.png"
-						alt="icon"
+						<img class="default-icon"
+							src="../assets/img/success.png"
+							alt="icon"
+						>
+						<p class="success-default-text">
+							{{ success }}
+						</p>
+					</div>
+					<div v-else-if="getStatusField === 'info-default'"
+						key="info-default"
+						class="default-container"
 					>
-					<p class="info-default-text">
-						{{ info }}
-					</p>
-				</div>
-			</transition>
+						<img class="default-icon"
+							src="../assets/img/info.png"
+							alt="icon"
+						>
+						<p class="info-default-text">
+							{{ info }}
+						</p>
+					</div>
+				</transition>
+			</div>
 		</template>
 	</div>
 </template>
@@ -100,6 +102,11 @@ export default {
 	name: 'VOverField',
 	props: {
 		value: null,
+		// Rest error
+		error: {
+			type: Object,
+			default: () => ({})
+		},
 		uid: {
 			type: [String, Number],
 			required: true,
@@ -136,6 +143,7 @@ export default {
 		currControl: {},
 		currCountError: 1,
 		maxPassword: 6,
+		minName: 3,
 		order: null,
 		heightError: null,
 		active: false,
@@ -148,10 +156,12 @@ export default {
 		getStatusField() {
 			if ('error' in this.currControl && this.currControl.error && this.reactiveMode) {
 				return 'error-default'
-			} else if ('error' in this.currControl && !this.currControl.error && this.reactiveMode && this.success) {
+			} else if ('error' in this.currControl && !this.currControl.error && !this.currControl.empty && this.success && this.reactiveMode) {
 				return 'success-default'
 			} else if (this.info) {
 				return 'info-default'
+			} else {
+				return ''
 			}
 		},
 		getAmountErrors() {
@@ -165,6 +175,11 @@ export default {
 				margin: String(this.margin).split(' ').map(p => `${p}px`).join(' ')
 			}
 		},
+		getMinName() {
+			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === 'name')
+			return currEl && 'min' in currEl && currEl.min && typeof currEl.min === 'number'
+				? currEl.min : null
+		},
 		getMaxPassword() {
 			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === 'password')
 			return currEl && 'max' in currEl && currEl.max && typeof currEl.max === 'number'
@@ -175,10 +190,16 @@ export default {
 		verifyRequired(value) {
 			return Array.isArray && !value.length || !value
 		},
+		verifyName(value) {
+			return value.length < (this.getMinName ? this.getMinName : this.minName)
+		},
 		verifyPhone(value) {
 			// const temp = process.env.NODE_ENV === 'development' ? 9 : ''
-			const pattern = new RegExp(`^(\\+7|8|9) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
-
+			const pattern = new RegExp(`^(\\+7|7|8|9) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
+			return !(pattern.test(value))
+		},
+		verifyEmail(value) {
+			const pattern = /^"?[- \w\+\.]+"?@[\w-]+\.\w{2,6}$/
 			return !(pattern.test(value))
 		},
 		verifyPassword(value) {
@@ -196,7 +217,7 @@ export default {
 			return currEl && 'text' in currEl && currEl.text
 				? currEl.text : null
 		},
-		orederError(value) {
+		orderError(value) {
 			const verification = this.verification
 				.map(curr => {
 					const create_method = name => name.map((v, i) => i === 0 ? v.toUpperCase() : v).join('')
@@ -229,69 +250,102 @@ export default {
 				return acc
 			}, '')
 		},
-		createErrorControl(text, error) {
+		createErrorControl(text, error, empty) {
 			this.currControl = {
 				uid: this.uid,
 				verification: this.verification,
 				status: true,
-				text, error
+				text, error, empty
 			}
 		},
 		checkField(send, value = this.value) {
-			const orederError = this.orederError(value)
-			const text = this.getText(orederError)
+			const orderError = this.orderError(value)
+			const isEmpty = !value
+			const isEmptyOptional = orderError !== 'required' && isEmpty
+			const text = this.getText(orderError)
 
-			switch (orederError) {
-				case 'required':
+			switch (orderError) {
+				case 'required': {
 					this.createErrorControl(
 						!text
-							? 'Это поле не может быть пустым!'
+							? 'Поле не может быть пустым'
 							: text,
-						this.verifyRequired(value)
+						isEmptyOptional ? false : this.verifyRequired(value),
+						isEmpty
 					)
+				}
 					break;
 
-				case 'phone':
+				case 'name': {
 					this.createErrorControl(
 						!text
-							? 'Не верный формат номера!'
+							? `Имя должно содержать не менее ${this.getMinName ? this.getMinName : this.minName} символов`
 							: text,
-						this.verifyPhone(value)
+						isEmptyOptional ? false : this.verifyName(value),
+						isEmpty
 					)
+				}
 					break;
 
-				case 'password':
+				case 'phone': {
+					this.createErrorControl(
+						!text
+							? 'Не верный формат номера'
+							: text,
+						isEmptyOptional ? false : this.verifyPhone(value),
+						isEmpty
+					)
+				}
+					break;
+
+				case 'email': {
+					this.createErrorControl(
+						!text
+							? 'Проверьте правильность введенных данных'
+							: text,
+						isEmptyOptional ? false : this.verifyEmail(value),
+						isEmpty
+					)
+				}
+					break;
+
+				case 'password': {
 					this.createErrorControl(
 						!text
 							? `Пароль должен содержать не менее ${this.getMaxPassword ? this.getMaxPassword : this.maxPassword} символов`
 							: text,
-						this.verifyPassword(value)
+						isEmptyOptional ? false : this.verifyPassword(value),
+						isEmpty
 					)
-
+				}
 					break;
 
-				case 'digit':
+				case 'digit': {
 					this.createErrorControl(
 						!text
-							? 'Допускается ввод только чисел!'
+							? 'Допускается ввод только чисел'
 							: text,
-						this.verifyDigit(value)
+						isEmptyOptional ? false : this.verifyDigit(value),
+						isEmpty
 					)
-
+				}
 					break;
 
-				case 'string':
+				case 'string': {
 					this.createErrorControl(
 						!text
-							? 'Допускается ввод только чисел и букв!'
+							? 'Допускается ввод только чисел и букв'
 							: text,
-						this.verifyString(value)
+						isEmptyOptional ? false : this.verifyString(value),
+						isEmpty
 					)
-
+				}
 					break;
 			}
 
 			this.$formState.SET_ERROR(this.currControl)
+			// ! На будущее  
+			// На этом месте нужно реализовать метод SET_SUCCESS
 
 			if (!send) {
 				this.$formState.SET_ACTIVE_FIELD(this.uid)
@@ -312,6 +366,9 @@ export default {
 	watch: {
 		value(val) {
 			this.checkField(false, val)
+			if (this.error && 'text' in this.error) {
+				this.error.text = null
+			}
 		},
 		async currControl({ error }) {
 			await this.$nextTick()
@@ -325,7 +382,7 @@ export default {
 						const el_error = document.querySelector(`[error="${this.uniqueMarkError}"]`)
 
 						this.heightError = {
-							top: `-${field_ref.lastChild.offsetHeight - el_error.offsetTop}px`
+							top: `-${field_ref.lastChild.offsetHeight - el_error.offsetTop + 20}px`
 						}
 					}
 				}
@@ -340,6 +397,12 @@ export default {
 		},
 		popub(isPopub) {
 			this.popubMode = isPopub
+		},
+		error(rError) {
+			if (rError && 'text' in rError) {
+				const { text } = rError
+				this.createErrorControl(text, true, false)
+			}
 		}
 	},
 	created() {
@@ -528,10 +591,10 @@ export default {
 		font-size: 12px;
 		margin: 0 10px;
 	}
-
-	.default-container {
-		display: flex;
+	.message-default-container {
 		margin: 10px 0 0 0;
+	}
+	.default-container {
 		display: flex;
 		align-items: center;
 		position: relative;
@@ -577,15 +640,15 @@ export default {
 		animation: error-default-enter .2s;
 
 		@keyframes error-default-enter {
-			0% { opacity: 0; left: 100px; }
-			50% { left: -10px; }
-			75% { left: 10px; }
-			100% { left: 0; }
+			0% { opacity: 0; transform: translateX(100px); }
+			50% { transform: translateX(-10px); }
+			75% { transform: translateX(10px); }
+			100% { transform: translateX(0); }
 		}
 	}
 	.error-default-leave-active,
 	.error-pupub-leave-active {
-		animation: error-default-leave .2s;
+		animation: error-default-leave;
 
 		@keyframes error-default-leave {
 			100% { opacity: 0; }
@@ -599,7 +662,7 @@ export default {
 		}
 	}
 	.info-default-leave-active {
-		animation: info-default-leave .2s;
+		animation: info-default-leave;
 
 		@keyframes info-default-leave {
 			100% { opacity: 0; }
@@ -613,7 +676,7 @@ export default {
 		}
 	}
 	.success-default-leave-active {
-		animation: success-default-leave .2s;
+		animation: success-default-leave;
 
 		@keyframes success-default-leave {
 			100% { opacity: 0; }
