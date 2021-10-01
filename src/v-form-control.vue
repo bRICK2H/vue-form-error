@@ -4,17 +4,27 @@
     :style="setFormStyles"
     @mouseup="$formState.SET_ACTIVE_FORM(uid)"
   >
-    <span v-if="buttonClose"
-      class="v-form-close v-form-control__v-form-close"
-      @click="$emit('closed')"
-    ></span>
-  
-      <p class="global-error v-form-control__global-error"
-        v-if="error && error.result && error.text"
+      <transition name="error-icon">
+				<span v-if="!activeError"
+					title="Показать ошибку"
+					class="v-info-error v-form-control__v-info-error"
+					@click="activeError = true"
+				></span>
+			</transition>
+
+      <p v-if="activeError && error && error.result && error.text"
+        class="global-error v-form-control__global-error"
+        :class="position === 'top' ? 'global-error--top' : ''"
         :ref="uniqueError"
-        :style="{ top: `calc(0% - ${errorHeight + 20}px)` }"
+        :style="position === 'top' ? { top: `calc(0% - ${errorHeight + 20}px)` } : { top: '20px' }"
       >
+        <span
+          class="v-form-close v-form-control__v-form-close"
+          @click="activeError = false"
+        ></span>
+
         {{ error.text }}
+
       </p>
     
     <slot />
@@ -59,6 +69,10 @@ export default {
       type: [String, Number],
       default: 'auto'
     },
+    maxWidth: {
+      type: [String, Number],
+      default: 'none'
+    },
     height: {
       type: [String, Number],
       default: 'auto'
@@ -71,25 +85,27 @@ export default {
       type: [String, Number],
       default: '40 80'
     },
+    position: {
+      type: String,
+      default: 'bottom'
+    },
     classes: {
       type: Array,
       default: () => ([])
     },
-    buttonClose: {
-      type: Boolean,
-      default: false
-    }
   },
   data: () => ({
+    active: false,
+    activeError: true,
     uniqueError: null,
     errorHeight: null,
-    active: false,
     alive: true
   }),
   computed: {
     setFormStyles() {
       return {
         width: this.width === 'auto' ? 'auto' : `${this.width}px`,
+        maxWidth: this.maxWidth !== 'none' ? `${+this.maxWidth}px` : 'none',
         height: this.height === 'auto' ? 'auto' : `${this.height}px`,
         padding: this.formStyle
           ? String(this.padding).split(' ').map(p => `${p}px`).join(' ')
@@ -113,7 +129,7 @@ export default {
     }
   },
   watch: {
-    async error(val) {
+    async error() {
       await this.$nextTick()
 
       if (this.$refs[this.uniqueError]) {
@@ -133,6 +149,15 @@ export default {
       control: this.control
     })
   },
+  updated() {
+    this.$formState.UPDATE_FIELDS(this)
+    this.$formState.SET_FIELDS(this, {
+      popub: this.popub,
+      reactive: this.reactive,
+      control: this.control
+    })
+    
+  },
   destroyed() {
     this.alive = false
     this.$formState.CLOSED_FORM(this.uid, {
@@ -144,7 +169,7 @@ export default {
 </script>
 
 <style lang="scss">
-	.v-form-control {
+		.v-form-control {
     background-color: #fff;
     margin: auto;
     position: relative;
@@ -163,42 +188,63 @@ export default {
     }
     &__global-error {
       position: absolute;
-      left: 0;
-
+      left: 10px;
+      top: 16px;
+      z-index: 10;
+      
       &::before, &::after {
         content: '';
         position: absolute;
-        clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+        clip-path: polygon(0% 100%, 50% 0%, 100% 100%);
       }
       &::before {
         width: 20px;
         height: 14px;
         left: 15px;
-        top: 100%;
+        top: -15.5px;
         background-color: #feb2b2;
       }
       &::after {
         width: 18px;
         height: 13px;
         left: 16px;
-        top: calc(100% - 2px);
+        top: -12.5px;
         background-color: #FFF5F6;
       }
     }
     &__v-form-close {
-			position: absolute;
-			top: 15px;
-			right: 15px;
+      float: right;
+      position: relative;
+      top: -5px;
+      right: -5px;
     }
+    &__v-info-error {
+			position: absolute;
+			left: 25px;
+      top: -30px;
+      z-index: 10;
+		}
 	}
 
   .global-error {
-    max-width: calc(100% - 100px);
-    width: fit-content;
-    border: 2px solid #feb2b2;
-    background-color: #fff5f6;
-    padding: 8px;
-    border-radius: 8px;
+    min-width: 210px;
+		max-width: calc(100% - 20px);
+		padding: 8px;
+		border: 2px solid #FEB2B2;
+		border-radius: 8px;
+		background-color: #FFF5F6;
+
+    &--top {
+      &::before, &::after {
+        clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+      }
+      &::before {
+        top: 100%;
+      }
+      &::after {
+        top: calc(100% - 2px);
+      }
+    }
   }
 
   .v-form-close {
@@ -213,4 +259,58 @@ export default {
 			transform: scale(1.2) rotate(90deg);
 		}
   }
+  .v-info-error {
+    width: 22px;
+		height: 22px;
+		font-size: 16px;
+		color: #FEB2B2;
+		border-radius: 50%;
+		border: 2px solid #FEB2B2;
+		background-color: #fff;
+		cursor: pointer;
+		transition: .2s;
+
+		&::after, &::before {
+			content: '';
+			width: 2px;
+			background-color: #FEB2B2;
+			position: absolute;
+			left: 50%;
+			display: flex;
+			justify-content: center;
+		}
+		&::after {
+			height: 9px;
+			border-radius: 30%;
+			top: calc(50% - 2px);
+			transform: translate(-50%, -50%);
+		}
+		&::before {
+			height: 2px;
+			border-radius: 50%;
+			top: calc(100% - 4px);
+			transform: translateX(-50%);
+		}
+		&:hover {
+			border: 2px solid transparent;
+			background-color: #FFF5F6;
+			transform: scale(1.2)
+		}
+  }
+  .error-icon-enter-active {
+		animation: error-icon-enter .2s;
+
+		@keyframes error-icon-enter {
+			0% { transform: scale(0) }
+			50% { transform: scale(1.2) }
+			100% { transform: scale(1) }
+		}
+	}
+	.error-icon-leave-active {
+		animation: error-icon-leave .2s;
+
+		@keyframes error-icon-leave {
+			100% { transform: scale(0) }
+		}
+	}
 </style>

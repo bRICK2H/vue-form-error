@@ -7,35 +7,33 @@ Vue.component('VFormControl', VFormControl)
 ```
 
 ## VFormControl config:
-| Name 				| Type 					| Default 													| Description 													|
-| ---- 				| :--: 					| :-----: 												  	| --------------- 											|
-| uid 				| `[Number, String]` | -															| Уникальный ключ, обязательный параметр				|
-| reactive 			| `Boolean`				| **false** 												| Реактивно обрабатывать ошибки для каждого поля	|
-| popub 				| `Boolean`				| **true** 													| Выводить ошибки в pupub режиме							|
-| error 				| `Object`				| **{ result: null, text: '' }** 					| Обработка общих ошибок с сервера						|
-| control 			| `Object`				| **{ errors: [ ], info: [ ], warnings: [ ] }** | Результат обработки ошибок, предупреждений 		|
-| width 				| `[Number, String]` | **auto** 													| Ширина формы 												|
-| height 			| `[Number, String]` | **auto** 													| Высота формы 												|
-| padding 			| `[Number, String]` | **'40 80'** 												| Padding формы 												|
-| formStyle			| `Boolean`				| **true** 													| Подключить стили формы									|
-| classes 			| `Array` 				| **[ ]**   												| Массив классов 												|
-| buttonClose 		| `Boolean` 			| **false**   												| Показывать иконку закрытия формы						|
-
-## VFormControl events:
-```js
-	// Если показана иконка закрытия формы, при нажатии возвращается emit - closed
-	$emit('closed')
-```
+| Name 				| Type 					| Default 													| Description 																		|
+| ---- 				| :--: 					| :-----: 												  	| --------------- 																|
+| uid 				| `[Number, String]` | -															| Уникальный ключ, обязательный параметр									|
+| reactive 			| `Boolean`				| **false** 												| Реактивно обрабатывать ошибки для каждого поля						|
+| popub 				| `Boolean`				| **true** 													| Выводить ошибки в pupub режиме												|
+| error 				| `Object`				| **{ result: null, text: '' }** 					| Обработка общих ошибок с сервера											|
+| control 			| `Object`				| **{ errors: [ ], info: [ ], warnings: [ ] }** | Результат обработки ошибок, предупреждений 							|
+| width 				| `[Number, String]` | **auto** 													| Ширина формы 																	|
+| maxWidth 			| `[Number, String]` | **none** 													| Максимальная ширина формы 													|
+| height 			| `[Number, String]` | **auto** 													| Высота формы 																	|
+| padding 			| `[Number, String]` | **'40 80'** 												| Padding формы 																	|
+| formStyle			| `Boolean`				| **true** 													| Подключить стили формы														|
+| classes 			| `Array` 				| **[ ]**   												| Массив классов 																	|
+| position 			| `String` 				| **'bottom'** 											| Выбор позиции окна ошибок, по умолчанию с низу bottom или top 	|
 
 ## VOverField config (дочерняя обертка для полей):
 | Name 				| Type 					| Default 				| Description 																																				|
 | ---- 				| :--: 					| :-----: 				| --------------- 																																		|
 | uid 				| `[Number, String]` | -						| Уникальный ключ, обязательный параметр																											|
-| verification 	| `Array`				| **['required']** 	| Условия валидации текущего поля, существующие: ['required', 'name', 'email', 'phone', 'password', 'digit', 'string'] 	|
+| verification 	| `Array`				| **['required']** 	| Условия валидации текущего поля, существующие: ['required', 'min', 'max', 'email', 'phone', 'password', 'digit', 'string'] 	|
 | info			 	| `String`				| **''** 				| Вывод информации (работает пока для режема popub: false)																					|
 | success		 	| `String`				| **''** 				| Информирование о правильном формате записи (работает пока для режема popub: false) 												|
 | value 				| `any`					| **null** 				| Текущее, изменяемое значение																														|
 | position 			| `String` 				| **'bottom'** 		| Выбор позиции окна ошибок, по умолчанию с низу bottom или top 																			|
+| width 				| `[Number, String]`	| **'auto'**	 		| Высота поля																																				|
+| margin 			| `[Number, String]`	| **0**	 				| margin поля																																				|
+| radius 			| `[Number, String]`	| **8**	 				| Радиус границ поля																																				|
 | classes 			| `Array` 				| **[ ]**   			| Массив классов 																																			|
 
 <!-- 
@@ -96,7 +94,7 @@ Vue.component('VFormControl', VFormControl)
 	<VOverField
 	  uid="name"
 	  :value="name"
-	  :verification="[{ name: 'name', min: 3 }]"
+	  :verification="['name', { name: 'min', text: `Имя не должен быть меньше ${data.max}` }]"
 	  position="top"
 	>
 	  <input class="input" type="text" v-model="login">
@@ -105,7 +103,7 @@ Vue.component('VFormControl', VFormControl)
 	<VOverField
 	  uid="login"
 	  :value="login"
-	  :verification="[{ name: 'required', text: 'Поле не может быть пустым!' }, 'phone']"
+	  :verification="['phone', { name: 'required', text: 'Поле не может быть пустым!' }]"
 	  position="top"
 	>
 	  <input class="input" type="text" v-model="login">

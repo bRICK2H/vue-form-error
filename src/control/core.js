@@ -9,6 +9,7 @@ export default {
 				this.forms = []
 				this.fields = []
 				this.buttons = []
+				this.prev_new_fields = []
 				this.options = {}
 				this.vm = new Vue
 			}
@@ -40,8 +41,33 @@ export default {
 				}
 			}
 
-			SET_FIELDS(form_instace, options) {
-				const fields = form_instace.$children.filter(curr => curr.name === 'v-over-field')
+			UPDATE_FIELDS(form_instance) {
+				const { control: { errors } } = this.options,
+					curr_fields = this.GET_FIELDS(),
+					updated_fields = form_instance.$children.filter(c => c.name === 'v-over-field'),
+					diff = !updated_fields.every(n => this.fields.map(f => f.uid).includes(n.uid))
+
+				if (diff) {
+					const new_fields = updated_fields.filter(curr => !(curr_fields.map(c => c.uid).includes(curr.uid)))
+
+					if (this.prev_new_fields.length && errors.length) {
+						this.prev_new_fields.forEach(curr => {
+							const err_index = errors.findIndex(c => c.uid === curr.uid)
+
+							if (err_index !== -1) {
+								this.vm.$delete(errors, err_index)
+							}
+
+						})
+					}
+					
+					this.prev_new_fields = new_fields
+				}
+				
+			}
+
+			SET_FIELDS(form_instance, options) {
+				const fields = form_instance.$children.filter(curr => curr.name === 'v-over-field')
 				this.options = { ...options }
 
 				fields.forEach((curr, i) => {
@@ -57,11 +83,11 @@ export default {
 
 			SET_ERROR(currError) {
 				const { uid, status, text, error } = currError,
-				{ control: { errors } } = this.options,
-				exist_error = errors.find(err => err.uid === uid),
-				index_error = errors.findIndex(err => err.uid === uid),
-				curr_instance = this.GET_CURR_FIELD(uid),
-				order = curr_instance.order
+					{ control: { errors } } = this.options,
+					exist_error = errors.find(err => err.uid === uid),
+					index_error = errors.findIndex(err => err.uid === uid),
+					curr_instance = this.GET_CURR_FIELD(uid),
+					order = curr_instance.order
 
 				if (error) {
 					if (exist_error === undefined) {
@@ -72,10 +98,9 @@ export default {
 							{ uid, status, text, order }
 						)
 					}
-
 				} else {
 					if (exist_error) {
-						errors.splice(index_error)
+						errors.splice(index_error, 1)
 					}
 				}
 				
@@ -96,7 +121,7 @@ export default {
 
 			MOVE_ACTIVE_FIELD(counter) {
 				const { control: { errors } } = this.options,
-				uid = errors[counter - 1].uid
+					uid = errors[counter - 1].uid
 
 				this.fields.forEach(curr => {
 					curr.active = curr.uid === uid
@@ -115,21 +140,21 @@ export default {
 				})
 			}
 
-			SET_ERROR_STYLE(uniqueField, uniqueMarkError) {
+			SET_ERROR_STYLE(uniqueField, uid, raduis) {
 				const error_styles = {
 					outline: 'none',
-					borderRadius: '8px',
+					borderRadius: `${raduis}px`,
 					border: '2px solid #FEB2B2'
 				}
-				const el_error = document.querySelectorAll(`[error="${uniqueMarkError}"]`)
+				const el_error = document.querySelectorAll(`.${uid}`)
 				
 				el_error.length
 					? SET_STYLE(el_error, error_styles)
 					: SET_STYLE([uniqueField], error_styles)
 			}
 
-			DELETE_ERROR_STYLE(uniqueField, uniqueMarkError) {
-				const el_error = document.querySelectorAll(`[error="${uniqueMarkError}"]`)
+			DELETE_ERROR_STYLE(uniqueField, uid) {
+				const el_error = document.querySelectorAll(`.${uid}`)
 
 				el_error.length
 					? DROP_STYLE(el_error)

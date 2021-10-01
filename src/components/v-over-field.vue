@@ -1,7 +1,7 @@
 <template>
 	<div class="v-over-field"
 		:class="[classes]"
-		:style="setStyleContainerMargin"
+		:style="setStyleContainer"
 		:ref="uniqueField"
 	>
 		<slot />
@@ -113,7 +113,7 @@ export default {
 		},
 		verification: {
 			type: Array,
-			default: () => (['required'])
+			default: null
 		},
 		info: {
 			type: String,
@@ -127,9 +127,17 @@ export default {
 			type: String,
 			default: 'bottom'
 		},
+		width: {
+			type: [Number, String],
+			default: 'auto'
+		},
 		margin: {
 			type: [String, Number],
-			default: '0'
+			default: 0
+		},
+		radius: {
+			type: [String, Number],
+			default: 8
 		},
 		classes: {
 			type: Array,
@@ -142,8 +150,6 @@ export default {
 		uniqueMarkError: '',
 		currControl: {},
 		currCountError: 1,
-		maxPassword: 6,
-		minName: 3,
 		order: null,
 		heightError: null,
 		active: false,
@@ -170,182 +176,205 @@ export default {
 		setStylePositionError() {
 			if (this.heightError) return this.heightError
 		},
-		setStyleContainerMargin() {
+		setStyleContainer() {
 			return {
+				width: this.width === 'auto' ? '100%' : `${this.width}px`,
 				margin: String(this.margin).split(' ').map(p => `${p}px`).join(' ')
 			}
 		},
-		getMinName() {
-			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === 'name')
-			return currEl && 'min' in currEl && currEl.min && typeof currEl.min === 'number'
-				? currEl.min : null
+		verifyRequired() {
+			const val = typeof this.value === 'number' ? String(this.value) : this.value
+			return !val || !String(val).length
 		},
-		getMaxPassword() {
-			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === 'password')
-			return currEl && 'max' in currEl && currEl.max && typeof currEl.max === 'number'
-				? currEl.max : null
+		verifyMax() {
+			const max_options = this.verification.find(curr => {
+				return typeof curr === 'object' && 'max' in curr && typeof curr.max === 'number'
+			})
+
+			return String(this.value).length > max_options.max
+		},
+		verifyMin() {
+			const min_options = this.verification.find(curr => {
+				if (typeof curr === 'object' && 'min' in curr && typeof curr.min === 'number') {
+					return curr
+				}
+			})
+
+			return String(this.value).length < min_options.min
+		},
+		verifyDigit() {
+			return /[\D]/.test(this.value)
+		},
+		verifyString() {
+			return /[\W]/.test(this.value)
+		},
+		verifyPhone() {
+			// const temp = process.env.NODE_ENV === 'development' ? 9 : ''
+			const pattern = new RegExp(`^(\\+7|7|8|9) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
+			return !(pattern.test(this.value))
+		},
+		verifyEmail() {
+			const pattern = /^"?[- \w\+\.]+"?@[\w-]+\.\w{2,6}$/
+			return !(pattern.test(this.value))
 		},
 	},
 	methods: {
-		verifyRequired(value) {
-			return Array.isArray && !value.length || !value
-		},
-		verifyName(value) {
-			return value.length < (this.getMinName ? this.getMinName : this.minName)
-		},
-		verifyPhone(value) {
-			// const temp = process.env.NODE_ENV === 'development' ? 9 : ''
-			const pattern = new RegExp(`^(\\+7|7|8|9) ?\\(?\\d{3}\\)? ?\\d{3}( |-)?\\d{2}( |-)?\\d{2}$`)
-			return !(pattern.test(value))
-		},
-		verifyEmail(value) {
-			const pattern = /^"?[- \w\+\.]+"?@[\w-]+\.\w{2,6}$/
-			return !(pattern.test(value))
-		},
-		verifyPassword(value) {
-			return value.length < (this.getMaxPassword ? this.getMaxPassword : this.maxPassword)
-		},
-		verifyDigit(value) {
-			return /[\D]/.test(value)
-		},
-		verifyString(value) {
-			return /[\W]/.test(value)
+		getEndingDigit(digit, words) {
+			const [first, second, third, fourth] = words
+			const n = Number(String(digit)[String(digit).length - 1])
+			
+			return [7, 8].includes(digit)
+				? fourth
+				: n === 1 && digit !== 11
+					? first
+					: [2, 3, 4].includes(n) && !([12, 13, 14].includes(digit))
+						? second
+						: third
 		},
 		getText(name) {
+			if (!name) return ''
 			const currEl = this.verification.find(curr => typeof curr === 'object' && curr.name === name)
 
 			return currEl && 'text' in currEl && currEl.text
 				? currEl.text : null
 		},
 		orderError(value) {
+			if (!this.verification) return false
+			
 			const verification = this.verification
 				.map(curr => {
-					const create_method = name => name.map((v, i) => i === 0 ? v.toUpperCase() : v).join('')
-					const generate_method = typeof curr === 'string'
-						? create_method(curr.split(''))
-						: create_method(curr.name.split(''))
-					const toggle_verification = `verify${generate_method}`
-					
+					const create_property = name => name.map((v, i) => i === 0 ? v.toUpperCase() : v).join('')
+					const generate_property = typeof curr === 'string'
+						? create_property(curr.split(''))
+						: create_property(curr.name.split(''))
+					const computed_property = `verify${generate_property}`
+
 					return {
 						name: typeof curr === 'string'
 							? curr
 							: curr.name,
-						error: this[toggle_verification](value)
+						error: this[computed_property]
 					}
 				})
 
-			return verification.reduce((acc, curr) => {
-				acc = curr.name
-				
-				if (verification.every(v => v.error)) {
-					acc = verification.includes('required')
-						? 'required'
-						: verification[verification.findIndex(i => i.error)].name
-				} else {
-					if (verification.some(v => v.error)) {
-						acc = curr.name
+			if (verification.length) {
+				if (verification.map(c => c.name).includes('required')) {
+					const required = verification.find(c => c.name === 'required')
+					
+					if (required.error) {
+						return 'required'
+					} else {
+						const rest = verification.filter(c => c.name !== 'required' && c.error)
+						return rest.length ? rest[0].name : false
 					}
+				} else {
+					const rest = verification.filter(c => c.error)
+					return rest.length ? rest[0].name : false
 				}
-
-				return acc
-			}, '')
+			} else {
+				return false
+			}
 		},
-		createErrorControl(text, error, empty) {
+		createErrorControl(text, error) {
 			this.currControl = {
 				uid: this.uid,
 				verification: this.verification,
 				status: true,
-				text, error, empty
+				text,
+				error
 			}
 		},
 		checkField(send, value = this.value) {
-			const orderError = this.orderError(value)
-			const isEmpty = !value
-			const isEmptyOptional = orderError !== 'required' && isEmpty
-			const text = this.getText(orderError)
+			const orderError = this.orderError(value),
+					text = this.getText(orderError)
 
 			switch (orderError) {
+				case false: this.createErrorControl(text, orderError)
+					break
+				
 				case 'required': {
 					this.createErrorControl(
 						!text
 							? 'Поле не может быть пустым'
 							: text,
-						isEmptyOptional ? false : this.verifyRequired(value),
-						isEmpty
+							this.verifyRequired
 					)
 				}
-					break;
+					break
 
-				case 'name': {
+				case 'min': {
+					const min_options = this.verification.find(curr => {
+						if (typeof curr === 'object' && 'min' in curr && typeof curr.min === 'number') {
+							return curr
+						}
+					})
+					
 					this.createErrorControl(
 						!text
-							? `Имя должно содержать не менее ${this.getMinName ? this.getMinName : this.minName} символов`
+							? `Минимальное количество символов не менее ${min_options.min}-${this.getEndingDigit(min_options.min, ['го', 'х', 'ти', 'ми'])}`
 							: text,
-						isEmptyOptional ? false : this.verifyName(value),
-						isEmpty
+						this.verifyMin
 					)
 				}
-					break;
+					break
 
-				case 'phone': {
+				case 'max': {
+					const max_options = this.verification.find(curr => {
+						return typeof curr === 'object' && 'max' in curr && typeof curr.max === 'number'
+					})
+					
 					this.createErrorControl(
 						!text
-							? 'Не верный формат номера'
+							? `Максимальное количество символов не более ${max_options.max}-${this.getEndingDigit(max_options.max, ['го', 'х', 'ти', 'ми'])}`
 							: text,
-						isEmptyOptional ? false : this.verifyPhone(value),
-						isEmpty
+						this.verifyMax
 					)
 				}
-					break;
-
-				case 'email': {
-					this.createErrorControl(
-						!text
-							? 'Проверьте правильность введенных данных'
-							: text,
-						isEmptyOptional ? false : this.verifyEmail(value),
-						isEmpty
-					)
-				}
-					break;
-
-				case 'password': {
-					this.createErrorControl(
-						!text
-							? `Пароль должен содержать не менее ${this.getMaxPassword ? this.getMaxPassword : this.maxPassword} символов`
-							: text,
-						isEmptyOptional ? false : this.verifyPassword(value),
-						isEmpty
-					)
-				}
-					break;
+					break
 
 				case 'digit': {
 					this.createErrorControl(
 						!text
 							? 'Допускается ввод только чисел'
 							: text,
-						isEmptyOptional ? false : this.verifyDigit(value),
-						isEmpty
+						this.verifyDigit
 					)
 				}
-					break;
+					break
 
 				case 'string': {
 					this.createErrorControl(
 						!text
 							? 'Допускается ввод только чисел и букв'
 							: text,
-						isEmptyOptional ? false : this.verifyString(value),
-						isEmpty
+						this.verifyString
 					)
 				}
-					break;
+					break
+
+				case 'phone': {
+					this.createErrorControl(
+						!text
+							? 'Неверный формат номера'
+							: text,
+						this.verifyPhone
+					)
+				}
+					break
+
+				case 'email': {
+					this.createErrorControl(
+						!text
+							? 'Проверьте правильность введенных данных'
+							: text,
+						this.verifyEmail
+					)
+				}
+					break
 			}
 
 			this.$formState.SET_ERROR(this.currControl)
-			// ! На будущее  
-			// На этом месте нужно реализовать метод SET_SUCCESS
+			// TODO На будущее На этом месте нужно реализовать метод SET_SUCCESS
 
 			if (!send) {
 				this.$formState.SET_ACTIVE_FIELD(this.uid)
@@ -370,25 +399,28 @@ export default {
 				this.error.text = null
 			}
 		},
-		async currControl({ error }) {
-			await this.$nextTick()
-			const field_ref = this.$refs[this.uniqueField]
-			
-			if (error) {
-				if (this.reactiveMode) {
-					this.$formState.SET_ERROR_STYLE(field_ref, this.uniqueMarkError)
+		currControl: {
+			deep: true,
+			async handler({ error }) {
+				await this.$nextTick()
+				const field_ref = this.$refs[this.uniqueField]
+				
+				if (error) {
+					if (this.reactiveMode) {
+						this.$formState.SET_ERROR_STYLE(field_ref, this.uid, this.radius)
 
-					if (this.position === 'top') {
-						const el_error = document.querySelector(`[error="${this.uniqueMarkError}"]`)
+						if (this.position === 'top') {
+							const el_error = document.querySelectorAll(`.${this.uid}`)
 
-						this.heightError = {
-							top: `-${field_ref.lastChild.offsetHeight - el_error.offsetTop + 20}px`
+							this.heightError = {
+								top: `-${field_ref.lastChild.offsetHeight - (el_error[0] ? el_error[0].offsetTop : 0) + 20}px`
+							}
 						}
 					}
-				}
-			} else {
-				if (this.reactiveMode) {
-					this.$formState.DELETE_ERROR_STYLE(field_ref, this.uniqueMarkError)
+				} else {
+					if (this.reactiveMode) {
+						this.$formState.DELETE_ERROR_STYLE(field_ref, this.uid)
+					}
 				}
 			}
 		},
@@ -408,25 +440,12 @@ export default {
 	created() {
 		this.uniqueField = `[field:${String(Math.random()).split('').slice(2, 12).join('')}]`
 	},
-	mounted() {
-		const el_error = document.querySelectorAll(`.${this.uid}`)
-		this.uniqueMarkError = `[${this.uid}:${String(Math.random()).split('').slice(2, 12).join('')}]`
-
-		if (el_error) {
-			for (let i = 0; i < el_error.length; i++) {
-				el_error[i].setAttribute('error', this.uniqueMarkError)
-			}
-		}
-
-	}
 }
 </script>
 
 <style lang="scss">
 	.v-over-field {
-		width: 100%;
 		position: relative;
-		margin: 10px 0;
 		border-radius: 8px;
 
 		&__error-popub-container {
@@ -613,7 +632,7 @@ export default {
 		color: #CA2E2E;
 	}
 	.info-default-text {
-		color: #A2A2B9;	
+		color: #A2A2B9;
 	}
 	.success-default-text {
 		color: #128788;
