@@ -110,6 +110,7 @@ export default {
         padding: this.formStyle
           ? String(this.padding).split(' ').map(p => `${p}px`).join(' ')
           : '0px',
+        margin: this.formStyle ? 'auto' : 'none',
         boxShadow: this.formStyle
           ? '0 15px 25px rgba(0,0,0, .2)'
           : 'none',
@@ -171,7 +172,6 @@ export default {
 <style lang="scss">
 		.v-form-control {
     background-color: #fff;
-    margin: auto;
     position: relative;
 
     &--form-error {
@@ -188,7 +188,7 @@ export default {
     }
     &__global-error {
       position: absolute;
-      left: 10px;
+      left: 20px;
       top: 16px;
       z-index: 10;
       
@@ -228,7 +228,7 @@ export default {
 
   .global-error {
     min-width: 210px;
-		max-width: calc(100% - 20px);
+		max-width: calc(100% - 40px);
 		padding: 8px;
 		border: 2px solid #FEB2B2;
 		border-radius: 8px;
@@ -313,4 +313,11 @@ export default {
 			100% { transform: scale(0) }
 		}
 	}
+  @media screen and (max-width: 768px) {
+    .v-form-control {
+      &--form-error {
+        border: 2px solid white;
+      }
+    }
+  }
 </style>

@@ -79,7 +79,7 @@
 							{{ success }}
 						</p>
 					</div>
-					<div v-else-if="getStatusField === 'info-default'"
+					<div v-else-if="getStatusField === 'info-default' && info"
 						key="info-default"
 						class="default-container"
 					>
@@ -183,8 +183,17 @@ export default {
 			}
 		},
 		verifyRequired() {
-			const val = typeof this.value === 'number' ? String(this.value) : this.value
+			const val = typeof this.value === 'number' || Array.isArray(this.value)
+				? String(this.value) : this.value
+				
 			return !val || !String(val).length
+		},
+		verifySamePassword() {
+			const field = this.verification.find(curr => {
+				return curr?.name === 'samePassword' && curr?.password
+			})
+
+			return field?.password !== this.value 
 		},
 		verifyMax() {
 			const max_options = this.verification.find(curr => {
@@ -200,7 +209,9 @@ export default {
 				}
 			})
 
-			return String(this.value).length < min_options.min
+			return min_options.type === 'number'
+				? this.value <= min_options.min
+				: String(this.value).length < min_options.min
 		},
 		verifyDigit() {
 			return /[\D]/.test(this.value)
@@ -216,6 +227,9 @@ export default {
 		verifyEmail() {
 			const pattern = /^"?[- \w\+\.]+"?@[\w-]+\.\w{2,6}$/
 			return !(pattern.test(this.value))
+		},
+		verifySelf() {
+			return this.value
 		},
 	},
 	methods: {
@@ -297,7 +311,8 @@ export default {
 						!text
 							? 'Поле не может быть пустым'
 							: text,
-							this.verifyRequired
+
+						this.verifyRequired
 					)
 				}
 					break
@@ -328,6 +343,17 @@ export default {
 							? `Максимальное количество символов не более ${max_options.max}-${this.getEndingDigit(max_options.max, ['го', 'х', 'ти', 'ми'])}`
 							: text,
 						this.verifyMax
+					)
+				}
+					break
+
+				case 'samePassword': {
+					this.createErrorControl(
+						!text
+							? 'Пароли не совпадают'
+							: text,
+							
+						this.verifySamePassword
 					)
 				}
 					break
@@ -371,6 +397,16 @@ export default {
 					)
 				}
 					break
+
+				case 'self': {
+					this.createErrorControl(
+						!text
+							? 'Введено не корректное значение'
+							: text,
+						this.verifySelf
+					)
+				}
+					break
 			}
 
 			this.$formState.SET_ERROR(this.currControl)
@@ -397,6 +433,12 @@ export default {
 			this.checkField(false, val)
 			if (this.error && 'text' in this.error) {
 				this.error.text = null
+			}
+		},
+		verification: {
+			deep: true,
+			handler(options) {
+				this.checkField(false, this.value)
 			}
 		},
 		currControl: {
@@ -456,8 +498,8 @@ export default {
 		}
 		&__error-call-icon {
 			position: absolute;
-			right: -30px;
-			bottom: 12px;
+			right: 0;
+    		top: -30px;
 		}
 	}
 	.error-call-icon {
@@ -610,13 +652,12 @@ export default {
 		font-size: 12px;
 		margin: 0 10px;
 	}
-	.message-default-container {
-		margin: 10px 0 0 0;
-	}
 	.default-container {
 		display: flex;
 		align-items: center;
 		position: relative;
+		min-height: 18px;
+		margin: 10px 0 0 0;
 	}
 	.default-icon {
 		width: 16px;

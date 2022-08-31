@@ -82,12 +82,12 @@ export default {
 			}
 
 			SET_ERROR(currError) {
-				const { uid, status, text, error } = currError,
-					{ control: { errors } } = this.options,
-					exist_error = errors.find(err => err.uid === uid),
-					index_error = errors.findIndex(err => err.uid === uid),
-					curr_instance = this.GET_CURR_FIELD(uid),
-					order = curr_instance.order
+				const { uid, status, text, error } = currError
+					,	{ control: { errors } } = this.options
+					,	exist_error = errors.find(err => err.uid === uid)
+					,	index_error = errors.findIndex(err => err.uid === uid)
+					,	curr_instance = this.GET_CURR_FIELD(uid)
+					, 	order = curr_instance ? curr_instance.order : 0
 
 				if (error) {
 					if (exist_error === undefined) {
@@ -128,13 +128,13 @@ export default {
 				})
 			}
 
-			SUBMIT_ACTIVE_FIELD() {
+			SUBMIT_ACTIVE_FIELD(fields) {
 				const { control: { errors } } = this.options,
 					uid = errors.length ? errors[0].uid : null
 
 				if (!uid) return
 
-				this.fields.forEach(curr => {
+				fields.forEach(curr => {
 					curr.currCountError = 1
 					curr.active = curr.uid === uid
 				})
@@ -180,11 +180,11 @@ export default {
 				return errors.length
 			}
 
-			GET_RESULT() {
+			GET_RESULT(fields) {
 				const keys = ['uid', 'value', 'verification']
 				const { control } = this.options
-				const validated = this.fields.every(curr => curr.currControl.error === false)
-				const data = this.fields.reduce((acc, curr) => {
+				const validated = fields.every(curr => curr.currControl.error === false)
+				const data = fields.reduce((acc, curr) => {
 					acc.push(keys.reduce((a, key) => (a[key] = curr[key], a), {}))
 					return acc
 				}, [])
@@ -212,13 +212,13 @@ export default {
 					: side === 'right' && curr === max
 			}
 			
-			SUBMIT() {
-				this.fields.forEach(curr => {
+			SUBMIT(fields) {
+				fields.forEach(curr => {
 					curr.reactiveMode = true
 					curr.checkField(true)
 				})
 
-				this.SUBMIT_ACTIVE_FIELD()
+				this.SUBMIT_ACTIVE_FIELD(fields)
 			}
 
 			SET_BUTTON(button, uid) {
@@ -234,6 +234,7 @@ export default {
 
 			TRIGGER_SUBMIT(uid) {
 				const curr_button = this.buttons.find(curr => curr.uid === uid)
+	
 				if (this.buttons.length && curr_button) {
 					curr_button.handler()
 				}

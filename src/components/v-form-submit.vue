@@ -86,8 +86,10 @@ export default {
 	},
 	methods: {
 		handler() {
-      	this.$formState.SUBMIT()
-			this.$emit('submit', this.$formState.GET_RESULT())
+			const fields = this.$parent.$children.filter(({ name }) => name === 'v-over-field')
+
+      	this.$formState.SUBMIT(fields)
+			this.$emit('submit', this.$formState.GET_RESULT(fields))
 			this.isHover = false
 			this.isFocus = false
 		}
